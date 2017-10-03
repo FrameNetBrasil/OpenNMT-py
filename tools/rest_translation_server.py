@@ -106,7 +106,7 @@ class ONMTStringDataset(onmt.IO.ONMTDataset):
         super(self.__class__, self).__init__(None, None, fields, None)
 
     def _read_corpus_file(self, path, truncate):
-            return [onmt.IO.extract_features(line) for line in [self._text.split()]]
+            return iter([onmt.IO.extract_features(line) for line in [self._text.split()]])
 
 
 def translate(text):
