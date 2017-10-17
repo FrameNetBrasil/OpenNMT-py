@@ -104,7 +104,7 @@ Now you have a model which you can use to predict on new data. We do this by run
 
 ## Some useful tools:
 
-## Rest  Web Service 
+## Rest Translation Service 
 
 This fork has a simple web service implementation that exposes translation through a REST service. If you have a trained model, you can run it following the steps below.
 
