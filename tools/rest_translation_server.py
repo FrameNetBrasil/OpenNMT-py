@@ -8,7 +8,7 @@ import math
 import codecs
 
 import torch
- 
+
 import onmt
 import onmt.IO
 import opts
@@ -21,18 +21,18 @@ translators = {}
 parser = argparse.ArgumentParser(description='translate.py')
 opts.add_md_help_argument(parser)
 
-parser.add_argument('-model', required=True,  nargs='+',
+parser.add_argument('-model', required=True, nargs='+',
                     help='Path to model(s) .pt file(s)')
-parser.add_argument('-src',   required=True,
+parser.add_argument('-src', required=True,
                     help='Source sequence to decode (one line per sequence)')
-parser.add_argument('-src_img_dir',   default="",
+parser.add_argument('-src_img_dir', default="",
                     help='Source image directory')
 parser.add_argument('-tgt',
                     help='True target sequence (optional)')
 parser.add_argument('-output', default='pred.txt',
                     help="""Path to output the predictions (each line will
                     be the decoded sequence""")
-parser.add_argument('-beam_size',  type=int, default=5,
+parser.add_argument('-beam_size', type=int, default=5,
                     help='Beam size')
 parser.add_argument('-batch_size', type=int, default=30,
                     help='Batch size')
@@ -67,16 +67,16 @@ parser.add_argument('-share_vocab', action='store_true',
 
 
 def reportScore(b, index, opt, count, words, predBatch, predScore, goldBatch, goldScore,
-                                predScoreTotal, predWordsTotal, goldScoreTotal, goldWordsTotal):
+                predScoreTotal, predWordsTotal, goldScoreTotal, goldWordsTotal):
     print("PRED AVG SCORE: %.4f, PRED PPL: %.4f" % (
         predScoreTotal / predWordsTotal,
-        math.exp(-predScoreTotal/predWordsTotal)))
+        math.exp(-predScoreTotal / predWordsTotal)))
 
- # !!!!!!!!!!!!!!!!!!!!!!!! Ajustar Gold!
+    # !!!!!!!!!!!!!!!!!!!!!!!! Ajustar Gold!
     if opt.tgt:
         print("GOLD AVG SCORE: %.4f, GOLD PPL: %.4f" % (
             goldScoreTotal / goldWordsTotal,
-            math.exp(-goldScoreTotal/goldWordsTotal)))
+            math.exp(-goldScoreTotal / goldWordsTotal)))
 
     os.write(1, bytes('\nSENT %d: %s\n' %
                       (count, " ".join(words)), 'UTF-8'))
@@ -99,14 +99,14 @@ def reportScore(b, index, opt, count, words, predBatch, predScore, goldBatch, go
                                                " ".join(predBatch[b][n])),
                               'UTF-8'))
 
-class ONMTStringDataset(onmt.IO.ONMTDataset):
 
+class ONMTStringDataset(onmt.IO.ONMTDataset):
     def __init__(self, text, fields):
         self._text = text
         super(self.__class__, self).__init__(None, None, fields, None)
 
     def _read_corpus_file(self, path, truncate):
-            return iter([onmt.IO.extract_features(line) for line in [self._text.split()]])
+        return iter([onmt.IO.extract_features(line) for line in [self._text.split()]])
 
 
 def translate(text):
@@ -115,6 +115,7 @@ def translate(text):
         print('\n', model)
         predScoreTotal, predWordsTotal, goldScoreTotal, goldWordsTotal = 0, 0, 0, 0
         count = 0
+
         if opt.dump_beam != "":
             import json
             translator.initBeamAccum()
@@ -135,10 +136,8 @@ def translate(text):
                 goldScoreTotal += sum(goldScore)
                 goldWordsTotal += sum(len(x) for x in batch.tgt[1:])
 
-
             for b in range(len(predBatch)):
                 count += 1
-
 
                 words = []
                 for f in src[:, b]:
@@ -147,10 +146,11 @@ def translate(text):
                         break
                     words.append(word)
                 prediction = {}
+                prediction["original"] = text
                 prediction["source"] = " ".join(words)
                 prediction["prediction"] = " ".join(predBatch[b][0])
                 prediction["score"] = "%.4f" % predScore[b][0]
-                prediction["perplexity"] = "%.4f" % math.exp(-predScoreTotal/predWordsTotal)
+                prediction["perplexity"] = "%.4f" % math.exp(-predScoreTotal / predWordsTotal)
                 prediction["model"] = model
                 predictions.append(prediction)
 
@@ -167,8 +167,11 @@ def translate(text):
 @app.route('/translate', methods=['POST'])
 def config():
     req = request.get_json()
-    res = translate(req[0]["src"])
-    return jsonify(res)
+    res = []
+    for s in req:
+        res.append(translate(s["src"]))
+    return jsonify(sum(res, []))
+
 
 if __name__ == '__main__':
     opt = parser.parse_args()
@@ -186,4 +189,4 @@ if __name__ == '__main__':
         modelopt.model = model
         translators[model] = onmt.Translator(modelopt, dummy_opt.__dict__)
 
-    app.run(debug = True)
+    app.run(debug=True)
