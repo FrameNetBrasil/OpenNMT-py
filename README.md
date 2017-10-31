@@ -104,6 +104,39 @@ Now you have a model which you can use to predict on new data. We do this by run
 
 ## Some useful tools:
 
+## Rest Translation Service 
+
+This fork has a simple web service implementation that exposes translation through a REST service. If you have a trained model, you can run it following the steps below.
+
+It's really desirable that you use a virtualenv for the next steps. If you are not familiar with that, just run these commands:
+
+    $ sudo pip install virtualenv
+    $ virtualenv -p python3 opennmt
+    $ source opennmt/bin/activate
+
+Than, clone OpenNMT-py:
+
+    $  git clone https://github.com/FrameNetBrasil/OpenNMT-py.git opennmt
+    $  cd opennmt/
+
+To use torch, you need to install considering your operating system and cuda version. Please, select the correct version for you directly at http://pytorch.org/ website. For me, an happy linux user without cuda (for simplicity) the command will look like:
+
+    $ pip install http://download.pytorch.org/whl/cu75/torch-0.2.0.post3-cp35-cp35m-manylinux1_x86_64.whl 
+	$ pip install torchvision
+
+Now, we can install OpenNMT-py dependencies:
+
+    $ pip install -r requirements.txt
+
+And finally,  we are able to run the rest_server to run your model:
+   
+    $  python rest_translation_server.py -model MODEL1 MODEL2 MODEL3  -src SRC_TEST  -verbose
+ 
+When ready, the rest will be ready at port 5000.
+
+To use the service we can try the following curl command line:
+
+    $ curl 'http://localhost:5000/translate' -H 'Origin: http://localhost:5000/translate' -H 'Accept-Encoding: gzip, deflate' -H 'Accept-Language: pt-BR,en-US;q=0.8,en-GB;q=0.6,pt;q=0.4,en;q=0.2' -H 'User-Agent: Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.79 Mobile Safari/537.36' -H 'Content-Type: application/json' -H 'Accept: application/json, text/javascript, */*; q=0.01' -H 'Referer: http://104.236.81.1:8080/' -H 'X-Requested-With: XMLHttpRequest' -H 'Connection: keep-alive' --data-binary '[{"src":"Hello World !"}]' --compressed
 
 ## Full Translation Example
 
@@ -183,3 +216,4 @@ The following pretrained models can be downloaded and used with translate.py (Th
   doi       = {10.18653/v1/P17-4012}
 }
 ```
+
