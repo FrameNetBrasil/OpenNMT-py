@@ -185,8 +185,9 @@ if __name__ == '__main__':
         torch.cuda.set_device(opt.gpu)
 
     for model in opt.model:
+        print("Loading model... " + model)
         modelopt = copy.copy(opt)
         modelopt.model = model
         translators[model] = onmt.Translator(modelopt, dummy_opt.__dict__)
 
-    app.run(debug=True)
+    app.run(debug=True,  host='0.0.0.0', port=8090)
