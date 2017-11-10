@@ -123,7 +123,7 @@ def translate(req):
     count = 0
 
     translator = translators[hash_byreq(req)]
-    text = req['src'];
+    text = req['src']
 
     if opt.dump_beam != "":
         import json
@@ -194,10 +194,10 @@ if __name__ == '__main__':
         torch.cuda.set_device(opt.gpu)
 
     for model in opt.model:
-        hash = hash_byname(model)
         print("Loading model... " + model)
         modelopt = copy.copy(opt)
         modelopt.model = model
+        hash = hash_byname(model)
         translators[hash] = onmt.Translator(modelopt, dummy_opt.__dict__)
 
     app.run(debug=True,  host='0.0.0.0', port=8090)
