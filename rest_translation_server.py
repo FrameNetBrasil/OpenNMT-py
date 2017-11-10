@@ -109,58 +109,67 @@ class ONMTStringDataset(onmt.IO.ONMTDataset):
         return iter([onmt.IO.extract_features(line) for line in [self._text.split()]])
 
 
-def translate(text):
+def hash_byname(model_name):
+    return model.split('.')[0].upper()
+
+def hash_byreq(req):
+    return (req['lang']['from']+'_'+req['lang']['to']).upper()
+
+
+def translate(req):
     predictions = []
-    for model, translator in translators.items():
-        print('\n', model)
-        predScoreTotal, predWordsTotal, goldScoreTotal, goldWordsTotal = 0, 0, 0, 0
-        count = 0
+    print('\n', model)
+    predScoreTotal, predWordsTotal, goldScoreTotal, goldWordsTotal = 0, 0, 0, 0
+    count = 0
 
-        if opt.dump_beam != "":
-            import json
-            translator.initBeamAccum()
-        data = ONMTStringDataset(text, translator.fields)
+    translator = translators[hash_byreq(req)]
+    text = req['src'];
 
-        testData = onmt.IO.OrderedIterator(
-            dataset=data, device=opt.gpu,
-            batch_size=opt.batch_size, train=False, sort=False,
-            shuffle=False)
+    if opt.dump_beam != "":
+        import json
+        translator.initBeamAccum()
+    data = ONMTStringDataset(text, translator.fields)
 
-        index = 0
-        for batch in testData:
-            predBatch, goldBatch, predScore, goldScore, attn, src \
-                = translator.translate(batch, data)
-            predScoreTotal += sum(score[0] for score in predScore)
-            predWordsTotal += sum(len(x[0]) for x in predBatch)
-            if opt.tgt:
-                goldScoreTotal += sum(goldScore)
-                goldWordsTotal += sum(len(x) for x in batch.tgt[1:])
+    testData = onmt.IO.OrderedIterator(
+        dataset=data, device=opt.gpu,
+        batch_size=opt.batch_size, train=False, sort=False,
+        shuffle=False)
 
-            for b in range(len(predBatch)):
-                count += 1
+    index = 0
+    for batch in testData:
+        predBatch, goldBatch, predScore, goldScore, attn, src \
+            = translator.translate(batch, data)
+        predScoreTotal += sum(score[0] for score in predScore)
+        predWordsTotal += sum(len(x[0]) for x in predBatch)
+        if opt.tgt:
+            goldScoreTotal += sum(goldScore)
+            goldWordsTotal += sum(len(x) for x in batch.tgt[1:])
 
-                words = []
-                for f in src[:, b]:
-                    word = translator.fields["src"].vocab.itos[f]
-                    if word == onmt.IO.PAD_WORD:
-                        break
-                    words.append(word)
-                prediction = {}
-                prediction["original"] = text
-                prediction["source"] = " ".join(words)
-                prediction["prediction"] = " ".join(predBatch[b][0])
-                prediction["score"] = "%.4f" % predScore[b][0]
-                prediction["perplexity"] = "%.4f" % math.exp(-predScoreTotal / predWordsTotal)
-                prediction["model"] = model
-                predictions.append(prediction)
+        for b in range(len(predBatch)):
+            count += 1
 
-                if opt.dump_beam:
-                    json.dump(translator.beam_accum,
-                              codecs.open(opt.dump_beam, 'w', 'utf-8'))
+            words = []
+            for f in src[:, b]:
+                word = translator.fields["src"].vocab.itos[f]
+                if word == onmt.IO.PAD_WORD:
+                    break
+                words.append(word)
+            prediction = {}
+            prediction["original"] = text
+            prediction["source"] = " ".join(words)
+            prediction["prediction"] = " ".join(predBatch[b][0])
+            prediction["score"] = "%.4f" % predScore[b][0]
+            prediction["perplexity"] = "%.4f" % math.exp(-predScoreTotal / predWordsTotal)
+            prediction["model"] = model
+            predictions.append(prediction)
 
-                if opt.verbose:
-                    reportScore(b, index, opt, count, words, predBatch, predScore, goldBatch, goldScore,
-                                predScoreTotal, predWordsTotal, goldScoreTotal, goldWordsTotal)
+            if opt.dump_beam:
+                json.dump(translator.beam_accum,
+                          codecs.open(opt.dump_beam, 'w', 'utf-8'))
+
+            if opt.verbose:
+                reportScore(b, index, opt, count, words, predBatch, predScore, goldBatch, goldScore,
+                            predScoreTotal, predWordsTotal, goldScoreTotal, goldWordsTotal)
     return predictions
 
 
@@ -169,7 +178,7 @@ def config():
     req = request.get_json()
     res = []
     for s in req:
-        res.append(translate(s["src"]))
+        res.append(translate(s))
     return jsonify(sum(res, []))
 
 
@@ -185,9 +194,10 @@ if __name__ == '__main__':
         torch.cuda.set_device(opt.gpu)
 
     for model in opt.model:
+        hash = hash_byname(model)
         print("Loading model... " + model)
         modelopt = copy.copy(opt)
         modelopt.model = model
-        translators[model] = onmt.Translator(modelopt, dummy_opt.__dict__)
+        translators[hash] = onmt.Translator(modelopt, dummy_opt.__dict__)
 
     app.run(debug=True,  host='0.0.0.0', port=8090)
