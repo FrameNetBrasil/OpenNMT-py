@@ -110,7 +110,7 @@ class ONMTStringDataset(onmt.IO.ONMTDataset):
 
 
 def hash_byname(model_name):
-    return model.split('.')[0].upper()
+    return model_name.split('.')[0].upper()
 
 def hash_byreq(req):
     return (req['lang']['from']+'_'+req['lang']['to']).upper()
